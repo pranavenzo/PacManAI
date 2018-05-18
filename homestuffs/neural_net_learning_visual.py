@@ -27,7 +27,7 @@ if abs(scale) > 1:
     scale = 1.0 / scale
 learning_rate = 0.01
 direction_vector = model.predict(new_X)[0] - model.predict(X)[0]
-target_for_new_x = scale * learning_rate * direction_vector + model.predict(X)[0]
+target_for_new_x = scale * learning_rate * direction_vector + model.predict(new_X)[0]
 print('---X vs new_X---')
 print(scale)
 print(direction_vector)
@@ -46,7 +46,7 @@ if abs(scale) > 1:
     scale = 1.0 / scale
 learning_rate = 0.01
 direction_vector = model.predict(newnew_X)[0] - model.predict(X)[0]
-target_for_new_x = scale * learning_rate * direction_vector + model.predict(X)[0]
+target_for_new_x = scale * learning_rate * direction_vector + model.predict(new_X)[0]
 print('---X vs new_X---')
 print(scale)
 print(direction_vector)
