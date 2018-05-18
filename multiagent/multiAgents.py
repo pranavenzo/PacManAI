@@ -331,12 +331,14 @@ class MonteCarloTreeSearchAgent(MultiAgentSearchAgent):
 
         """
 
-        "*** YOUR CODE HERE ***"
-
         def tree_policy(gameState):
-            while not (gameState.data._lose and gameState.data._win):
+            while not (gameState.isWin() or gameState.isLose()):
+                if gameState not in self.tree:
+                    self.tree[gameState] = []
                 if len(self.tree[gameState]) != len(gameState.getLegalActions(self.curr_player)):
-                    return expand(gameState)
+                    ret = expand(gameState)
+                    self.curr_player = (self.curr_player + 1) % self.num_ghosts
+                    return ret
                 nextgameState = best_child(gameState, self.tree[gameState], self.exploration_constant)
                 self.curr_player = (self.curr_player + 1) % self.num_ghosts
                 gameState = nextgameState
@@ -353,7 +355,6 @@ class MonteCarloTreeSearchAgent(MultiAgentSearchAgent):
             children.append(expanded_node)
             self.tree[gameState] = children
             to_ret = gameState.generateSuccessor(self.curr_player, expanded_node)
-            self.curr_player = (self.curr_player + 1) % self.num_ghosts
             return to_ret
 
         def best_child(gameState, children, exploration_constant):
@@ -367,26 +368,32 @@ class MonteCarloTreeSearchAgent(MultiAgentSearchAgent):
                     best_score = score
                     best_child = child
             ret = gameState.generateSuccessor(self.curr_player, best_child)
-            self.curr_player = (self.curr_player + 1) % self.num_ghosts
-
-            return
+            return ret
 
         def default_policy(gameState):
-            while not (gameState.data._lose and gameState.data._win):
-                actions = gameState.getLegalActions(self.curr_player)
+            my_player = self.curr_player
+            while not (gameState.isWin() or gameState.isLose()):
+                actions = gameState.getLegalActions(my_player)
                 if len(actions) == 0 and (not gameState.data._lose and not gameState.data._win):
                     print('poi')
                 if gameState.data._lose or gameState.data._win:
                     break
                 action = random.choice(actions)
 
-                nextGameState = gameState.generateSuccessor(self.curr_player, action)
+                nextGameState = gameState.generateSuccessor(my_player, action)
                 gameState = nextGameState
-                self.curr_player = (self.curr_player + 1) % self.num_ghosts
-            reward = 1 if gameState.data._win else 0
+                my_player = (my_player + 1) % self.num_ghosts
+            if gameState.isWin():
+                reward = 100
+            elif gameState.isLose():
+                reward = -100
+            else:
+                reward = 1
             return reward
 
         def backup(gameState, result):
+            self.N[gameState] = self.N.get(gameState, 0) + 1
+            self.Q[gameState] = self.Q.get(gameState, 0) + result
             while gameState in self.parents:
                 self.N[gameState] = self.N[gameState] + 1
                 self.Q[gameState] = self.Q[gameState] + result
@@ -404,6 +411,7 @@ class MonteCarloTreeSearchAgent(MultiAgentSearchAgent):
             successor = tree_policy(gameState)
             result = default_policy(successor)
             backup(successor, result)
+            self.curr_player = 0
         best_child_found = best_child(gameState, self.tree[gameState], 0)
 
         for action in gameState.getLegalActions(self.curr_player):
