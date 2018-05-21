@@ -2,7 +2,6 @@ import math
 import random
 
 import matplotlib.pyplot as plt
-import numpy as np
 
 FIXED_SET_SIZE = 5
 
