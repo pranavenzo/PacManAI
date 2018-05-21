@@ -7,6 +7,8 @@ FIXED_SET_SIZE = 5
 
 
 def euclidean_distance(pointa, pointb):
+    pointb = pointb[0]
+    pointa = pointa[0]
     return math.sqrt((pointa[0] - pointb[0]) ** 2 + (pointa[1] - pointb[1]) ** 2)
 
 
@@ -41,25 +43,26 @@ def extract_x_y_from_points(points):
     return X, Y
 
 
-points = []
-d_values = []
-running_means = []
-accepted_new_points = []
-accepted_new_points_running_count = 0
-for i in range(1000):
-    if i > FIXED_SET_SIZE:
-        d_values.append(calculate_squared_distance_within_set(points))
-        running_means.append(float(sum(d_values)) / len(d_values))
-    point = (random.random() * 20, random.random() * 20)
-    accepted_new_points_running_count += add_point_to_set(point, points)
-    accepted_new_points.append(accepted_new_points_running_count)
-# x, y = extract_x_y_from_points(points)
-# plt.scatter(*extract_x_y_from_points(points))
-# plt.show()
-# plt.clf()
-# plt.plot(range(len(d_values)), d_values)
-# plt.plot(range(len(running_means)), running_means)
-plt.plot(range(len(accepted_new_points)), accepted_new_points)
-plt.show()
-plt.clf()
-print('mean value', float(sum(d_values)) / len(d_values))
+def try_stuff():
+    points = []
+    d_values = []
+    running_means = []
+    accepted_new_points = []
+    accepted_new_points_running_count = 0
+    for i in range(1000):
+        if i > FIXED_SET_SIZE:
+            d_values.append(calculate_squared_distance_within_set(points))
+            running_means.append(float(sum(d_values)) / len(d_values))
+        point = (random.random() * 20, random.random() * 20)
+        accepted_new_points_running_count += add_point_to_set(point, points)
+        accepted_new_points.append(accepted_new_points_running_count)
+    # x, y = extract_x_y_from_points(points)
+    # plt.scatter(*extract_x_y_from_points(points))
+    # plt.show()
+    # plt.clf()
+    # plt.plot(range(len(d_values)), d_values)
+    # plt.plot(range(len(running_means)), running_means)
+    plt.plot(range(len(accepted_new_points)), accepted_new_points)
+    plt.show()
+    plt.clf()
+    print('mean value', float(sum(d_values)) / len(d_values))
