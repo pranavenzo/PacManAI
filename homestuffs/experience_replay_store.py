@@ -3,13 +3,29 @@ from scipy.spatial import ConvexHull
 
 
 class ExperienceReplayStore():
-    def __init__(self, model, hash_func=lambda x: x, learning_rate=0.1, max_replays=100):
+    def __init__(self, model, hash_func=lambda x: x, learning_rate=1, max_replays=100):
         self.experiences_rewards = {}
         self.experiences_states = []
         self.model = model
         self.learning_rate = learning_rate
         self.max_replays = max_replays
         self.hash_func = hash_func
+
+    def add_state2(self, new_state, reward):
+        target_for_new_x = self.model.predict(new_state)
+        min_val = float("inf")
+        d_v = None
+        for point in self.experiences_states:
+            r_1 = self.experiences_rewards[self.hash_func(point)]
+            r_2 = reward
+            comp = abs(r_1 - r_2)
+            if min_val > comp:
+                min_val = comp
+                d_v = [(self.model.predict(point)[0] - self.model.predict(new_state)[0])]
+        if len(self.experiences_states) > 0:
+            target_for_new_x += d_v
+            self.model.partial_fit(new_state, target_for_new_x)
+        self.__add_state_to_set(new_state, reward)
 
     def add_state(self, new_state, reward):
         target_for_new_x = self.model.predict(new_state)
@@ -23,11 +39,10 @@ class ExperienceReplayStore():
             similarity = smaller / bigger
             if abs(similarity) > 1:
                 similarity = 1.0 / similarity
-            direction_vector = self.model.predict(new_state)[0] - self.model.predict(point)[0]
             scale = 1 / (self.__euclidean_distance(point, new_state))
             if max_val <= similarity * scale:
                 max_val = similarity * scale
-                d_v = direction_vector
+                d_v = self.model.predict(point)[0] - self.model.predict(new_state)[0]
         if len(self.experiences_states) > 0:
             target_for_new_x += max_val * self.learning_rate * d_v
             self.model.partial_fit(new_state, target_for_new_x)

@@ -77,19 +77,39 @@ def doStuff():
     threeD_plot(points, model)
 
 
+def score(points):
+    tot = 0.0
+    for point_i in points:
+        min_dist = float("inf")
+        min_point = None
+        for point_j in points:
+            dist = euclidean_distance(point_i, point_j)
+            if dist < min_dist and dist > 0:
+                min_dist = dist
+                min_point = point_j
+        tot += abs(get_reward_for_state([min_point]) - get_reward_for_state([point_i]))
+    return tot / len(points)
+
+
 def doStuffDecently():
     model = MLPRegressor()
     initial_X = get_random_state_representation()
     model.partial_fit(initial_X, np.array([0, 0]).reshape(1, -1))
     exp = ExperienceReplayStore(model=model, hash_func=lambda x: tuple(x[0].tolist()), max_replays=50)
-    num_iter = 500
+    num_iter = 100
     for i in range(num_iter):
         if i % (0.1 * num_iter) == 0:
             print('Done with iter %d' % i)
         new_point = get_random_state_representation()
         reward = get_reward_for_state(new_point)
-        exp.add_state(new_point, reward)
-    threeD_plot(exp.experiences_states, exp.model)
+        exp.add_state2(new_point, reward)
+    print('Starting to get points')
+    random_points = []
+    for i in range(1000):
+        random_points.append(get_random_state_representation())
+    print('Plotting away')
+    threeD_plot(random_points, exp.model)
+    print(score([model.predict(x)[0] for x in random_points]))
 
 
 doStuffDecently()
