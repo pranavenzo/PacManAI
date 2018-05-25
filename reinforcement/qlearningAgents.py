@@ -23,6 +23,8 @@ from featureExtractors import *
 import random, util, math
 import numpy as np
 
+from homestuffs.experience_replay_store import ExperienceReplayStore
+
 
 class QLearningAgent(ReinforcementAgent):
     """
@@ -260,6 +262,7 @@ class DeepQAgent(PacmanQAgent):
         self.experiences = []
         self.experiences_MAX_LEN = 1000
         self.experiences_SAMPLE_LEN = 100
+        self.ers = ExperienceReplayStore(model=MLPRegressor(max_iter=10), max_replays=1000)
 
     def getWeights(self):
         util.raiseNotDefined()
@@ -293,25 +296,27 @@ class DeepQAgent(PacmanQAgent):
         y = [reward + (self.discount * maxqnext)]
         f = self.featExtractor
         features = f.getFeatures(state, action)
-
-        if len(self.experiences) < self.experiences_MAX_LEN:
-            row = list(features)
-            f = y[0]
-            row.append(f)
-            self.experiences.append(np.array(row))
-        elif random.random() <= .2:
-            replay = random.sample(self.experiences, self.experiences_SAMPLE_LEN)
-            X_replay = [p[:-1] for p in replay]
-            y_replay = [p[-1] for p in replay]
-            self.model.partial_fit(X_replay, y_replay)
-            row = list(features)
-            f = y[0]
-            row.append(f)
-            self.experiences.append(np.array(row))
-            random.shuffle(self.experiences)
-            self.experiences = self.experiences[1:]
-        features = np.array(features).reshape(1, -1)
-        self.model.partial_fit(features, y)
+        # self.ers.add_state(features, reward + (self.discount * maxqnext))
+        # X, y = self.ers.get_sample(100)
+        # self.model.partial_fit(X, y)
+        # if len(self.experiences) < self.experiences_MAX_LEN:
+        #     row = list(features)
+        #     f = y[0]
+        #     row.append(f)
+        #     self.experiences.append(np.array(row))
+        # elif random.random() <= .2:
+        #     replay = random.sample(self.experiences, self.experiences_SAMPLE_LEN)
+        #     X_replay = [p[:-1] for p in replay]
+        #     y_replay = [p[-1] for p in replay]
+        #     self.model.partial_fit(X_replay, y_replay)
+        #     row = list(features)
+        #     f = y[0]
+        #     row.append(f)
+        #     self.experiences.append(np.array(row))
+        #     random.shuffle(self.experiences)
+        #     self.experiences = self.experiences[1:]
+        # features = np.array(features).reshape(1, -1)
+        # self.model.partial_fit(features, y)
 
     def final(self, state):
         "Called at the end of each game."

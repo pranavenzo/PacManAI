@@ -2,11 +2,12 @@ import random
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-from matplotlib import pyplot
+from matplotlib import pyplot, animation
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.neural_network import MLPRegressor
 from homestuffs.observe import *
 from homestuffs.experience_replay_store import *
+from homestuffs.myanimation import *
 
 
 def euclidean_distance(pointa, pointb):
@@ -14,7 +15,7 @@ def euclidean_distance(pointa, pointb):
 
 
 def get_reward_for_state(X):
-    return (X[0][0] ** 2 + X[0][1] ** 2) * (math.sin(X[0][0]) - math.sin(X[0][1]))
+    return (X[0][0] + X[0][1]) * (math.sin(X[0][0]) - math.sin(X[0][1]))
 
 
 def get_random_state_representation():
@@ -37,6 +38,26 @@ def threeD_plot(points, model):
     ax = Axes3D(fig)
     ax.scatter(x, y, z)
     pyplot.show()
+
+
+def threeD_plot_ns(points, model, show=True, ax=None):
+    x = []
+    y = []
+    z = []
+
+    for point in points:
+        mapping = model.predict(point)[0]
+        x.append(mapping[0])
+        y.append(mapping[1])
+        z.append(get_reward_for_state(point))
+
+    if ax is None:
+        fig = pyplot.figure()
+        ax = Axes3D(fig)
+    ax.scatter(x, y, z)
+    if show:
+        pyplot.show()
+    return ax
 
 
 def doStuff():
@@ -94,9 +115,10 @@ def score(points):
 def doStuffDecently():
     model = MLPRegressor()
     initial_X = get_random_state_representation()
-    model.partial_fit(initial_X, np.array([0, 0]).reshape(1, -1))
-    exp = ExperienceReplayStore(model=model, hash_func=lambda x: tuple(x[0].tolist()), max_replays=50)
-    num_iter = 100
+    model.partial_fit(initial_X, np.array([2, 2]).reshape(1, -1))
+    max_replays = 500
+    exp = ExperienceReplayStore(model=model, hash_func=lambda x: tuple(x[0].tolist()), max_replays=max_replays)
+    num_iter = 500
     for i in range(num_iter):
         if i % (0.1 * num_iter) == 0:
             print('Done with iter %d' % i)
@@ -104,12 +126,19 @@ def doStuffDecently():
         reward = get_reward_for_state(new_point)
         exp.add_state2(new_point, reward)
     print('Starting to get points')
-    random_points = []
-    for i in range(1000):
-        random_points.append(get_random_state_representation())
-    print('Plotting away')
-    threeD_plot(random_points, exp.model)
-    print(score([model.predict(x)[0] for x in random_points]))
+    data = []
+    num_iter = 100
+    for i in range(num_iter):
+        # new_point = get_random_state_representation()
+        # reward = get_reward_for_state(new_point)
+        # exp.add_state2(new_point, reward)
+        exp.iterate(1)
+        new_rows = []
+        for dat in exp.experiences_states:
+            mapping = exp.model.predict(dat)[0]
+            new_rows.append([mapping[0], mapping[1], get_reward_for_state([[dat[0][0], dat[0][1]]])])
+        data.extend(new_rows)
+    animate_scatter_3d(data, len(exp.experiences_states))
 
 
 doStuffDecently()

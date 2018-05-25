@@ -1,15 +1,46 @@
 import math
+import random
+
 from scipy.spatial import ConvexHull
 
 
 class ExperienceReplayStore():
-    def __init__(self, model, hash_func=lambda x: x, learning_rate=1, max_replays=100):
+    def __init__(self, model, hash_func=lambda x: x, learning_rate=1e-5, max_replays=100):
         self.experiences_rewards = {}
+        self.min_reward = float("inf")
+        self.max_reward = float("-inf")
         self.experiences_states = []
         self.model = model
         self.learning_rate = learning_rate
         self.max_replays = max_replays
         self.hash_func = hash_func
+
+    def __normalize_reward(self, reward):
+        return (reward - self.min_reward) / (self.max_reward - self.min_reward)
+
+    def get_sample(self, sample_size):
+        x = random.sample(self.experiences_states, sample_size)
+        y = [self.experiences_rewards[x_i] for x_i in x]
+        return x, y
+
+    def iterate(self, num_iter):
+        for i in range(num_iter):
+            if i % (0.1 * num_iter) == 0 and num_iter > 10:
+                print('Done with iter %d' % i)
+            new_state = random.choice(self.experiences_states)
+            reward = self.experiences_rewards[self.hash_func(new_state)]
+            target_for_new_x = self.model.predict(new_state)
+            min_val = float("inf")
+            d_v = None
+            for point in self.experiences_states:
+                r_1 = self.experiences_rewards[self.hash_func(point)]
+                r_2 = reward
+                comp = abs(r_1 - r_2)
+                d_v = (self.model.predict(point)[0] - self.model.predict(new_state)[0])
+                similarity = 1 - self.__normalize_reward(comp)
+                d_v = d_v * similarity * self.learning_rate
+                target_for_new_x += d_v
+            self.model.partial_fit(new_state, target_for_new_x)
 
     def add_state2(self, new_state, reward):
         target_for_new_x = self.model.predict(new_state)
@@ -19,11 +50,11 @@ class ExperienceReplayStore():
             r_1 = self.experiences_rewards[self.hash_func(point)]
             r_2 = reward
             comp = abs(r_1 - r_2)
-            if min_val > comp:
-                min_val = comp
-                d_v = [(self.model.predict(point)[0] - self.model.predict(new_state)[0])]
-        if len(self.experiences_states) > 0:
+            d_v = (self.model.predict(point)[0] - self.model.predict(new_state)[0])
+            similarity = 1 - self.__normalize_reward(comp)
+            d_v = d_v * similarity * self.learning_rate
             target_for_new_x += d_v
+        if len(self.experiences_states) == self.max_replays:
             self.model.partial_fit(new_state, target_for_new_x)
         self.__add_state_to_set(new_state, reward)
 
@@ -64,10 +95,12 @@ class ExperienceReplayStore():
         return sum([self.__euclidean_distance(target, point) for point in points])
 
     def __add_state_to_set(self, state, reward):
-
         self.experiences_states.append(state)
         self.experiences_rewards[self.hash_func(state)] = reward
-
+        if reward < self.min_reward:
+            self.min_reward = reward
+        elif reward > self.max_reward:
+            self.max_reward = reward
         return self.__delete_least_valuable_point()
 
     def __delete_least_valuable_point_2(self):
@@ -79,6 +112,10 @@ class ExperienceReplayStore():
         hull = ConvexHull(points)
         p = hull.vertices
         self.experiences_states = [self.experiences_states[x] for x in hull.vertices]
+
+    def __compute_min_max_rewards(self):
+        self.min_reward = min(self.experiences_rewards.values())
+        self.max_reward = max(self.experiences_rewards.values())
 
     def __delete_least_valuable_point(self):
         accepted_new_point = 0
@@ -92,7 +129,10 @@ class ExperienceReplayStore():
             if d > highest:
                 highest = d
                 highest_point = i
+        deleted = self.experiences_rewards[self.hash_func(self.experiences_states[highest_point])]
         del self.experiences_rewards[self.hash_func(self.experiences_states[highest_point])]
+        if deleted == self.max_reward or deleted == self.min_reward:
+            self.__compute_min_max_rewards()
         del self.experiences_states[highest_point]
         if highest_point != len(self.experiences_states) - 1:
             accepted_new_point = 1
