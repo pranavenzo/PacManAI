@@ -20,7 +20,7 @@ class ExperienceReplayStore():
 
     def get_sample(self, sample_size):
         x = random.sample(self.experiences_states, sample_size)
-        y = [self.experiences_rewards[x_i] for x_i in x]
+        y = [self.experiences_rewards[self.hash_func(x_i)] for x_i in x]
         return x, y
 
     def iterate(self, num_iter):
@@ -42,22 +42,6 @@ class ExperienceReplayStore():
                 target_for_new_x += d_v
             self.model.partial_fit(new_state, target_for_new_x)
 
-    def add_state2(self, new_state, reward):
-        target_for_new_x = self.model.predict(new_state)
-        min_val = float("inf")
-        d_v = None
-        for point in self.experiences_states:
-            r_1 = self.experiences_rewards[self.hash_func(point)]
-            r_2 = reward
-            comp = abs(r_1 - r_2)
-            d_v = (self.model.predict(point)[0] - self.model.predict(new_state)[0])
-            similarity = 1 - self.__normalize_reward(comp)
-            d_v = d_v * similarity * self.learning_rate
-            target_for_new_x += d_v
-        if len(self.experiences_states) == self.max_replays:
-            self.model.partial_fit(new_state, target_for_new_x)
-        self.__add_state_to_set(new_state, reward)
-
     def add_state(self, new_state, reward):
         target_for_new_x = self.model.predict(new_state)
         max_val = float("-inf")
@@ -70,7 +54,7 @@ class ExperienceReplayStore():
             similarity = smaller / bigger
             if abs(similarity) > 1:
                 similarity = 1.0 / similarity
-            scale = 1 / (self.__euclidean_distance(point, new_state))
+            scale = 1 / (self.__euclidean_distance(point, new_state) + 1e-100)
             if max_val <= similarity * scale:
                 max_val = similarity * scale
                 d_v = self.model.predict(point)[0] - self.model.predict(new_state)[0]
@@ -78,6 +62,10 @@ class ExperienceReplayStore():
             target_for_new_x += max_val * self.learning_rate * d_v
             self.model.partial_fit(new_state, target_for_new_x)
         self.__add_state_to_set(new_state, reward)
+
+    def __delete_random_point(self):
+        if len(self.experiences_states) <= self.max_replays: return 1
+        del self.experiences_states[random.randint(0, len(self.experiences_states) - 1)]
 
     def __euclidean_distance(self, pointa, pointb):
         pointa = pointa[0]
@@ -101,7 +89,7 @@ class ExperienceReplayStore():
             self.min_reward = reward
         elif reward > self.max_reward:
             self.max_reward = reward
-        return self.__delete_least_valuable_point()
+        return self.__delete_random_point()
 
     def __delete_least_valuable_point_2(self):
         if len(self.experiences_states) <= self.max_replays: return 1

@@ -262,7 +262,9 @@ class DeepQAgent(PacmanQAgent):
         self.experiences = []
         self.experiences_MAX_LEN = 1000
         self.experiences_SAMPLE_LEN = 100
-        self.ers = ExperienceReplayStore(model=MLPRegressor(max_iter=10), max_replays=1000)
+        self.ers = ExperienceReplayStore(model=MLPRegressor(max_iter=10), max_replays=100,
+                                         hash_func=lambda x: tuple(x[0].tolist()))
+        self.ers.model.partial_fit(np.array([0, 0, 0, 0]).reshape(1, -1), np.array([0]).reshape(-1, 1))
 
     def getWeights(self):
         util.raiseNotDefined()
@@ -296,9 +298,16 @@ class DeepQAgent(PacmanQAgent):
         y = [reward + (self.discount * maxqnext)]
         f = self.featExtractor
         features = f.getFeatures(state, action)
-        # self.ers.add_state(features, reward + (self.discount * maxqnext))
-        # X, y = self.ers.get_sample(100)
-        # self.model.partial_fit(X, y)
+        features = np.array(features).reshape(1, -1)
+        ###########
+        self.ers.add_state(features, reward + (self.discount * maxqnext))
+        if len(self.ers.experiences_states) == self.ers.max_replays:
+            X, y = self.ers.get_sample(10)
+            X = [x[0] for x in X]
+            self.model.partial_fit(X, y)
+        else:
+            self.model.partial_fit(features, y)
+        ############
         # if len(self.experiences) < self.experiences_MAX_LEN:
         #     row = list(features)
         #     f = y[0]

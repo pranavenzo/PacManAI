@@ -31,6 +31,6 @@ def animate_scatter_3d(input_data, time_length):
     graph = ax.scatter(data.x, data.y, data.z)
     i = int(len(input_data) / time_length - 1)
     ani = matplotlib.animation.FuncAnimation(fig, update_graph, int(len(input_data) / time_length - 1),
-                                             interval=300, blit=False)
+                                             interval=15, blit=False)
 
     plt.show()

@@ -116,23 +116,25 @@ def doStuffDecently():
     model = MLPRegressor()
     initial_X = get_random_state_representation()
     model.partial_fit(initial_X, np.array([2, 2]).reshape(1, -1))
-    max_replays = 500
+    max_replays = 50
     exp = ExperienceReplayStore(model=model, hash_func=lambda x: tuple(x[0].tolist()), max_replays=max_replays)
-    num_iter = 500
+    num_iter = 50
     for i in range(num_iter):
         if i % (0.1 * num_iter) == 0:
             print('Done with iter %d' % i)
         new_point = get_random_state_representation()
         reward = get_reward_for_state(new_point)
-        exp.add_state2(new_point, reward)
+        exp.add_state(new_point, reward)
     print('Starting to get points')
     data = []
-    num_iter = 100
+    num_iter = 1000
     for i in range(num_iter):
-        # new_point = get_random_state_representation()
-        # reward = get_reward_for_state(new_point)
-        # exp.add_state2(new_point, reward)
-        exp.iterate(1)
+        if i % (0.1 * num_iter) == 0:
+            print('Done with iter %d' % i)
+        new_point = get_random_state_representation()
+        reward = get_reward_for_state(new_point)
+        exp.add_state(new_point, reward)
+        # exp.iterate(1)
         new_rows = []
         for dat in exp.experiences_states:
             mapping = exp.model.predict(dat)[0]
