@@ -13,18 +13,15 @@ from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Dense, GRU, Embedding, Flatten, Dropout
 from tensorflow.python.keras.optimizers import Adam
 from tensorflow.python.keras.preprocessing.text import Tokenizer
-from tensorflow.python.keras.preprocessing.sequence import pad_sequences
 from keras.utils import np_utils
 from keras import backend as K
 
 class_mapping = {"AGAINST": 0, "NONE": 1, "FAVOR": 2}
 
-
 def sentence_cleaner(raw):
     clean = re.sub("[^a-zA-Z]", " ", raw)
     words = clean.split()
     return words
-
 
 def read_data(file_names):
     X, y = [], []
@@ -37,7 +34,6 @@ def read_data(file_names):
             y.append(class_mapping[row[-1]])
             text += row[2]
     return X, y, text
-
 
 X, y, data_text = read_data(["semeval2016-task6-trialdata.csv", "semeval2016-task6-trainingdata.csv"])
 data_list = sentence_cleaner(data_text)
@@ -62,7 +58,6 @@ print(x_train_pad.shape)
 idx = tokenizer.word_index
 inverse_map = dict(zip(idx.values(), idx.keys()))
 
-
 def tokens_to_string(tokens):
     # Map from tokens back to words.
     words = [inverse_map[token] for token in tokens if token != 0]
@@ -71,7 +66,6 @@ def tokens_to_string(tokens):
     text = " ".join(words)
 
     return text
-
 
 print(X[1])
 print(tokens_to_string(x_train_tokens[1]))
@@ -108,8 +102,8 @@ for v in vals.keys():
 print(vals)
 kfold = StratifiedKFold(n_splits=5, shuffle=True)
 cvscores_avg = []
-cvscores_for = []
-cvscores_agnst = []
+cvscores_against = []
+cvscores_favor = []
 tri = []
 for train, test in kfold.split(x_train_pad, y):
     x_train = x_train_pad[train]
@@ -126,7 +120,6 @@ for train, test in kfold.split(x_train_pad, y):
     # model.add(Dropout(0.5))
     model.add(GRU(units=16))
     model.add(Dense(3, activation='softmax'))
-
     model.compile(loss='categorical_crossentropy',
                   optimizer=Adam(lr=1e-3),
                   metrics=['acc'])
@@ -141,13 +134,13 @@ for train, test in kfold.split(x_train_pad, y):
     score2 = model.evaluate(x_train, y_train, batch_size=128)
     print(score, score2)
     cvscores_avg.append((dl[0] + dl[1]) / 2.0)
-    cvscores_for.append(dl[0])
-    cvscores_agnst.append(dl[1])
-    nyp=np.array([0]*len(y_test.argmax(axis=-1)))
+    cvscores_against.append(dl[0])
+    cvscores_favor.append(dl[1])
+    nyp = np.array([0] * len(y_test.argmax(axis=-1)))
     trial = f1_score(y_true=y_test.argmax(axis=-1), y_pred=nyp, average=None)[0]
     tri.append(trial)
 print('Avg', np.mean(cvscores_avg))
-print('For', np.mean(cvscores_for))
-print('Agnst', np.mean(cvscores_agnst))
-print('BL',  np.mean(tri))
+print('Against', np.mean(cvscores_against))
+print('For', np.mean(cvscores_favor))
+print('BL', np.mean(tri))
 # print(model.summary())
